@@ -142,7 +142,10 @@ selected_papers <- paper_indices %>%
     top_n(10, index) %>%
     arrange(collection, desc(index)) %>%
     left_join(title_lookup, by = "id") %>%
-    select(collection, index, views_per_day, posted_date, title)
+    mutate(pub = ifelse(is.na(pub_date), "N", "Y")) %>%
+    select(collection, index, 
+           "views/day" = views_per_day, 
+           posted = posted_date, pub, title)
 
-knitr::kable(selected_papers)
+knitr::kable(selected_papers, digits = 3)
 ```
