@@ -2,3 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
+prod_articles.csv
+prod_article_traffic.csv
+prod_publication_dates.csv

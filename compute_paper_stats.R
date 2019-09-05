@@ -10,7 +10,7 @@ pub_dates <- read_csv("prod_publication_dates.csv") %>%
 
 db <- left_join(
     articles %>% 
-        select(id, doi, collection, posted, author_vector), 
+        select(id, doi, collection, posted, author_vector, title), 
     traffic %>% 
         select(id = article, month, year, views = abstract, downloads = pdf), 
     by = "id")

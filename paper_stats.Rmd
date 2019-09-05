@@ -115,3 +115,34 @@ db %>%
     guides(color = "none")
 ```
 
+# Compute an "Invisibility" index
+
+Compute index as fraction of preprints in the same collection with at least as many views_per_day.
+
+```{r}
+paper_indices <- paper_stats %>%
+    group_by(collection) %>%
+    mutate(index = rank(views_per_day, ties.method = "min"), 
+           index = 1 - index / n()) %>%
+    ungroup() %>%
+    select(id, collection, views_per_day, index, 
+           traffic_date, posted_date, pub_date, 
+           views, downloads)
+```
+
+## Select a few papers per collection to display
+
+```{r selected papers per collection}
+title_lookup <- db %>%
+    select(id, title) %>%
+    distinct()
+
+selected_papers <- paper_indices %>%
+    group_by(collection) %>%
+    top_n(10, index) %>%
+    arrange(collection, desc(index)) %>%
+    left_join(title_lookup, by = "id") %>%
+    select(collection, index, views_per_day, posted_date, title)
+
+knitr::kable(selected_papers)
+```
