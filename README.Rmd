@@ -1,0 +1,28 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+# rxivist_exploration
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The goal of rxivist_exploration is to explore the abstract views and pdf download statistics of *bioRxiv* preprints, as collected by the [rxivist](https://rxivist.org/) project (github:  [https://github.com/blekhmanlab/rxivist/](https://github.com/blekhmanlab/rxivist/))
+
+# File description
+
+* `paper_stats.RDS` is a binary RDS file with computed data statistics
+* `raw_stats.RDS` is a binary RDS file with the raw download and view data
+* `paper_stats.Rmd` is the Rmarkdown containing stats and graphs and analyses
+* `paper_stats.md` is the rendered markdown output (see that first!!)
+
+Remaining files are the RStudio project and git repo miscellany files.
+

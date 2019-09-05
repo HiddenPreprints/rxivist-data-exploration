@@ -149,3 +149,31 @@ selected_papers <- paper_indices %>%
 
 knitr::kable(selected_papers, digits = 3)
 ```
+
+# Presentation Figures
+
+```{r}
+df <- paper_stats %>% filter(collection == "ecology")
+
+q_vec <- c(0.01, 0.5, 0.99)
+view_stats <- data.frame(quantile = factor(q_vec), 
+                         views = df %>%
+                             pull(views_per_day) %>%
+                             quantile(q_vec))
+num_papers <- NROW(df)
+
+p <- df %>%
+    ggplot(aes(x = views_per_day)) + 
+    coord_cartesian(xlim= c(0, 80)) + 
+    geom_density(mapping = aes(y = ..density..*2362), fill = "#444444", line = NA) + 
+    geom_vline(mapping = aes(xintercept = views, color = quantile), 
+               data = view_stats, linetype = 2, size = 1) + 
+    scale_color_viridis_d(option = "B") + 
+#    scale_color_manual(c("black", "red", ""))
+    labs(x = "Avg. views per day", y = "Frequency") + 
+    theme_dark(base_size = 16) + 
+    guides(color = "none")
+    
+ggsave("ecology_views.png", plot = p, width = 4, height = 4)
+```
+
