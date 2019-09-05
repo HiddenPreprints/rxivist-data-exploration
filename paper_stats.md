@@ -31,15 +31,23 @@ the first 3 months after posting date (posted\_date + 3 months \>=
 traffic\_date \>= posted\_date). Traffic stats are collected monthly, so
 we assign a date equal to the last day of the month for the traffic.
 
-Columns are: \* `id` - unique numerical id for the preprint \*
-`downloads` - number of pdf downloads \* `views` - number of views of
-the abstract \* `traffic_date` - latest traffic date for the summed
-views and downloads \* `posted_date` - date of initial posting to
-bioRxiv \* `collection` - the subject area designation on bioRxiv \*
-`duration` - the \# of days, computed as traffic\_date - posted\_date +
-1 \* `downloads_per_day` - downloads / duration \* `views_per_day` -
-views / duration \* `pub_date` - date of publication of preprint (NA if
-not yet published)
+Columns are:
+
+  - `id` - unique numerical id for the preprint
+  - `downloads` - number of pdf downloads
+  - `views` - number of views of the abstract
+  - `traffic_date` - latest traffic date for the summed views and
+    downloads
+  - `posted_date` - date of initial posting to bioRxiv
+  - `collection` - the subject area designation on bioRxiv
+  - `duration` - the \# of days, computed as traffic\_date -
+    posted\_date + 1
+  - `downloads_per_day` - downloads / duration
+  - `views_per_day` - views / duration
+  - `pub_date` - date of publication of preprint (NA if not yet
+    published)
+
+<!-- end list -->
 
 ``` r
 paper_stats <- readRDS("paper_stats.RDS")
@@ -66,7 +74,7 @@ collection (posted date + 3 months).
 
 ``` r
 paper_stats <- paper_stats %>%
-    filter(is.na(pub_date) | 
+    mutate(unpublished = is.na(pub_date) | 
                pub_date > traffic_date)
 ```
 
@@ -75,10 +83,13 @@ paper_stats <- paper_stats %>%
 Compute quantiles:
 
 ``` r
+quantile_vec <- c(0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95)
+
 views_quantiles <- paper_stats %>%
+    filter(unpublished) %>%
     select(collection, views_per_day, downloads_per_day) %>%
     nest(-collection) %>%
-    mutate(views_q = map(data, ~ quantile(.$views_per_day, probs = c(0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95))), 
+    mutate(views_q = map(data, ~ quantile(.$views_per_day, probs = quantile_vec)), 
            views_q = map(views_q, ~ bind_rows(.) %>% gather())) %>%
     select(-data) %>% 
     unnest() %>%
@@ -123,17 +134,39 @@ knitr::kable(views_quantiles)
 
 ``` r
 paper_stats %>%
-    ggplot(aes(x = views_per_day, fill = views_per_day)) + 
+    ggplot(aes(x = views_per_day, color = unpublished)) + 
     geom_density() + 
     coord_cartesian(xlim = c(0, 100)) + 
     facet_wrap(~collection, scales = "free", ncol = 4) + 
-    theme_bw(base_size = 16) + 
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    theme_bw(base_size = 12) + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1), 
+          legend.position  = "top")
 ```
+
+    ## Warning: Groups with fewer than two data points have been dropped.
 
 ![](paper_stats_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
-## How does traffic decrease over time
+## How does recency of a preprint affect views
+
+With more preprints being posted, we might expect the \# of views per
+day to change with recency. For the least-visible preprints, the number
+of views per day seems to be mostly constant. However, depending on
+category, the upper-quantiles can vary, sometimes decreasing with
+recency if sample sizes are small.
+
+``` r
+paper_stats %>%
+    ggplot(aes(x = posted_date, y = views_per_day)) + 
+    geom_point() + 
+    geom_quantile(quantiles = quantile_vec, formula = "y ~ x") + 
+    facet_wrap(~collection, scales = "free", ncol = 4) + 
+    theme_bw(base_size = 12)
+```
+
+![](paper_stats_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+## How does traffic decrease over time for a sample of preprints
 
 ``` r
 db <- readRDS("raw_stats.RDS")
@@ -153,4 +186,4 @@ db %>%
 
     ## Don't know how to automatically pick scale for object of type difftime. Defaulting to continuous.
 
-![](paper_stats_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](paper_stats_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
