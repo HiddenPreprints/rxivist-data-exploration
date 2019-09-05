@@ -1,0 +1,99 @@
+---
+title: "bioRxiv preprint stats"
+author:
+- "Hao Ye"
+- "Michael Parkin"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tidyverse)
+```
+
+# Data Overview
+
+See the `compute_paper_stats.R` file for the code used to generate the paper stats data.
+
+The data collects information on preprints, with one row per preprint. Stats are computed by summing up monthly views and downloads for up to the first 3 months after posting date (posted_date + 3 months >= traffic_date >= posted_date). Traffic stats are collected monthly, so we assign a date equal to the last day of the month for the traffic.
+
+Columns are:
+* `id` - unique numerical id for the preprint
+* `downloads` - number of pdf downloads
+* `views` - number of views of the abstract
+* `traffic_date` - latest traffic date for the summed views and downloads
+* `posted_date` - date of initial posting to bioRxiv
+* `collection` - the subject area designation on bioRxiv
+* `duration` - the # of days, computed as traffic_date - posted_date + 1
+* `downloads_per_day` - downloads / duration
+* `views_per_day` - views / duration
+* `pub_date` - date of publication of preprint (NA if not yet published)
+
+```{r}
+paper_stats <- readRDS("paper_stats.RDS")
+str(paper_stats)
+```
+
+## Filter papers
+
+We want to focus on "low-visibility" preprints, so use only the papers that are unpublished or published after the last date of traffic collection (posted date + 3 months).
+
+```{r}
+paper_stats <- paper_stats %>%
+    filter(is.na(pub_date) | 
+               pub_date > traffic_date)
+```
+
+## Examine statistical quantiles of views per day
+
+Compute quantiles:
+```{r}
+views_quantiles <- paper_stats %>%
+    select(collection, views_per_day, downloads_per_day) %>%
+    nest(-collection) %>%
+    mutate(views_q = map(data, ~ quantile(.$views_per_day, probs = c(0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95))), 
+           views_q = map(views_q, ~ bind_rows(.) %>% gather())) %>%
+    select(-data) %>% 
+    unnest() %>%
+    mutate(key = factor(key, levels = c("5%", "10%", "25%", "50%", "75%", "90%", "95%"))) %>%
+    spread(key, value)
+
+knitr::kable(views_quantiles)
+```
+
+## Distributions of views per day
+
+```{r, fig.width = 6, fig.height = 18}
+paper_stats %>%
+    ggplot(aes(x = views_per_day, fill = views_per_day)) + 
+    geom_density() + 
+    coord_cartesian(xlim = c(0, 100)) + 
+    facet_wrap(~collection, scales = "free", ncol = 4) + 
+    theme_bw(base_size = 16) + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+## How does traffic decrease over time
+
+```{r}
+db <- readRDS("raw_stats.RDS")
+
+set.seed(42)
+selected_ids <- sample(db$id, 50)
+
+db %>%
+    filter(id %in% selected_ids) %>%
+    mutate(id = factor(id)) %>%
+    group_by(id) %>%
+    ggplot(aes(x = traffic_date - posted, y = views, color = id)) + 
+    geom_line() + 
+    theme_bw(base_size = 20) + 
+    guides(color = "none")
+```
+
